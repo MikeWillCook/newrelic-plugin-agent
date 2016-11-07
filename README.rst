@@ -7,6 +7,7 @@ NewRelic platform. Currently supported backend systems are:
 - Alternative PHP Cache
 - Apache HTTP Server
 - CouchDB
+- DC/OS (history)
 - Elasticsearch
 - HAProxy
 - Memcached

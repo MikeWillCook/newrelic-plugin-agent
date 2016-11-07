@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Multiple Plugin Agent for the New Relic Platform
 
@@ -85,7 +86,11 @@ class NewRelicPluginAgent(helper.Controller):
         :rtype: str
 
         """
-        return self.config.application.license_key
+
+        key = os.getenv('NEWRELIC_KEY')
+        if key == None:
+            key = self.config.application.license_key
+        return key 
 
     def poll_plugin(self, plugin_name, plugin, config):
         """Kick off a background thread to run the processing task.
@@ -98,7 +103,10 @@ class NewRelicPluginAgent(helper.Controller):
         if not isinstance(config, (list, tuple)):
             config = [config]
 
-        for instance in config:
+        for idx, instance in enumerate(config):
+            appName = os.getenv("NEWRELIC_%s_APP_NAME_%i" % (plugin_name.upper(), idx))
+            if appName != None:
+                instance.name = appName 
             thread = threading.Thread(target=self.thread_process,
                                       kwargs={'config': instance,
                                               'name': plugin_name,
