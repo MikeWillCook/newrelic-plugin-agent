@@ -21,4 +21,5 @@ available = {
     'redis': 'newrelic_plugin_agent.plugins.redis.Redis',
     'riak': 'newrelic_plugin_agent.plugins.riak.Riak',
     'uwsgi': 'newrelic_plugin_agent.plugins.uwsgi.uWSGI',
+    'dcos_health': 'newrelic_plugin_agent.plugins.dcos_health.DcosHealth',
     'dcos_history': 'newrelic_plugin_agent.plugins.dcos_history.DcosHistory'}
