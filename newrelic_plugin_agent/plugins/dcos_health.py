@@ -32,6 +32,10 @@ class DcosHealth(base.JSONStatsPlugin):
                 'agent': {
                     'healthy': 0,
                     'unhealthy': 0
+                },
+                'agent_public': {
+                    'healthy': 0,
+                    'unhealthy': 0
                 }
             }
         }
@@ -82,34 +86,44 @@ class DcosHealth(base.JSONStatsPlugin):
             dcos_metrics, units_metrics, nodes_metrics = self.parse(data)
 
             # summary metrics
-            for item in dcos_metrics['units'].keys():
+            dmu = dcos_metrics['units']
+            for item in dmu.keys():
                 metric_name = "health/cluster/units/%s" % item
-                self.add_gauge_value(metric_name, 'counts', dcos_metrics['units'][item])
+                self.add_gauge_value(metric_name, 'total', dmu[item])
 
-            for role in dcos_metrics['nodes'].keys():
-                for item in dcos_metrics['nodes'][role].keys():
+            total = dmu['healthy'] + dmu['unhealthy']
+            perc = 100.0 * dmu['healthy'] / total if total > 0 else 0
+            self.add_gauge_value('health/cluster/units/health', 'percent', perc)
+
+            dmn = dcos_metrics['nodes']
+            for role in dmn.keys():
+                for item in dmn[role].keys():
                     metric_name = "health/cluster/nodes/%s/%s" % (role, item)
-                    self.add_gauge_value(metric_name, 'counts', dcos_metrics['nodes'][role][item])
+                    self.add_gauge_value(metric_name, 'total', dmn[role][item])
+
+                total = dmn[role]['healthy'] + dmn[role]['unhealthy']
+                perc = 100.0 * dmn[role]['healthy'] / total if total > 0 else 0
+                self.add_gauge_value('health/cluster/nodes/%s/health' % role, 'percent', perc)
 
             # unit metrics
             for unit in units_metrics.keys():
                 metric_name = "health/unit/%s/health" % unit
-                self.add_gauge_value(metric_name, 'counts', units_metrics[unit]['health'])
+                self.add_gauge_value(metric_name, 'bool', units_metrics[unit]['health'])
 
                 for node in units_metrics[unit]['node'].keys():
                     for item in units_metrics[unit]['node'][node].keys():
                         metric_name = "health/unit/%s/node/%s/%s" % (unit, node, item)
-                        self.add_gauge_value(metric_name, 'counts', units_metrics[unit]['node'][node][item])
+                        self.add_gauge_value(metric_name, 'bool', units_metrics[unit]['node'][node][item])
 
             # node metrics
             for node in nodes_metrics.keys():
                 for item in ['leader', 'health']:
                     metric_name = "health/node/%s/%s" % (node, item)
-                    self.add_gauge_value(metric_name, 'counts', nodes_metrics[node][item])
+                    self.add_gauge_value(metric_name, 'bool', nodes_metrics[node][item])
 
                 for unit in nodes_metrics[node]['unit'].keys():
                     for item in nodes_metrics[node]['unit'][unit].keys():
                         metric_name = "health/node/%s/unit/%s/%s" % (node, unit, item)
-                        self.add_gauge_value(metric_name, 'counts', nodes_metrics[node]['unit'][unit][item])
+                        self.add_gauge_value(metric_name, 'bool', nodes_metrics[node]['unit'][unit][item])
         else:
             LOGGER.debug('Stats output: %r', data)

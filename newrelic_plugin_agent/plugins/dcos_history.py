@@ -46,7 +46,8 @@ class DcosHistory(base.JSONStatsPlugin):
                 'cpus': 0,
                 'mem': 0,
                 'disk': 0
-            }
+            },
+            'allocated': {}
         }
         framework_metrics = {}
         slaves_metrics = {}
@@ -56,8 +57,8 @@ class DcosHistory(base.JSONStatsPlugin):
             framework_metrics[name] = {
                 'tasks': {},
                 'offered_resources': {},
-                'resources': {},
-                'used_resources': {}
+                'used_resources': {},
+                'allocated': {}
             }
 
             framework_metrics[name]['tasks']['ERROR'] = fm['TASK_ERROR']
@@ -81,7 +82,8 @@ class DcosHistory(base.JSONStatsPlugin):
                 'tasks': {},
                 'offered_resources': {},
                 'resources': {},
-                'used_resources': {}
+                'used_resources': {},
+                'allocated': {}
             }
 
             slaves_metrics[name]['tasks']['ERROR'] = slave['TASK_ERROR']
@@ -124,13 +126,15 @@ class DcosHistory(base.JSONStatsPlugin):
 
     def add_health_value(self, metric_name, metrics_group, metric_item, value):
         if metrics_group == 'tasks':
-            unit = "tasks"
+            unit = 'tasks'
             # also add derived metric on tasks to show change
             self.add_derive_value("%s_change" % metric_name, unit, value)
+        elif metrics_group == 'allocated':
+            unit = 'percent'
         elif metric_item == 'cpus':
-            unit = "counts"
+            unit = 'cores'
         else:
-            unit = "bytes"
+            unit = 'bytes'
 
         self.add_gauge_value(metric_name, unit, value)
 
@@ -142,6 +146,13 @@ class DcosHistory(base.JSONStatsPlugin):
                     value = dcos_metrics[metrics_group][metric_item]
                     metric_name = "history/cluster/%s/%s" % (metrics_group, metric_item)
                     self.add_health_value(metric_name, metrics_group, metric_item, value)
+                # add percent of cluster allocated
+                dmu = dcos_metrics['used_resources']
+                dmt = dcos_metrics['resources']
+                for metric_item in ['cpus', 'mem', 'disk']:
+                    perc = 100.0 * dmu[metric_item] / dmt[metric_item] if dmt[metric_item] > 0 else 0
+                    metric_name = "history/cluster/allocated/%s" % metric_item
+                    self.add_health_value(metric_name, 'allocated', metric_item, perc)
 
             for fm in framework_metrics.keys():
                 for metrics_group in framework_metrics[fm].keys():
@@ -149,6 +160,13 @@ class DcosHistory(base.JSONStatsPlugin):
                         value = framework_metrics[fm][metrics_group][metric_item]
                         metric_name = "history/framework/%s/%s/%s" % (fm, metrics_group, metric_item)
                         self.add_health_value(metric_name, metrics_group, metric_item, value)
+                # add percent of cluster allocated to framework
+                fmu = framework_metrics[fm]['used_resources']
+                dmt = dcos_metrics['resources']
+                for metric_item in ['cpus', 'mem', 'disk']:
+                    perc = 100.0 * fmu[metric_item] / dmt[metric_item] if dmt[metric_item] > 0 else 0
+                    metric_name = "history/framework/%s/allocated/%s" % (fm, metric_item)
+                    self.add_health_value(metric_name, 'allocated', metric_item, perc)
 
             for slave in slaves_metrics.keys():
                 for metrics_group in slaves_metrics[slave].keys():
@@ -156,5 +174,12 @@ class DcosHistory(base.JSONStatsPlugin):
                         value = slaves_metrics[slave][metrics_group][metric_item]
                         metric_name = "history/slave/%s/%s/%s" % (slave, metrics_group, metric_item)
                         self.add_health_value(metric_name, metrics_group, metric_item, value)
+                # add percent of slave allocated
+                smu = slaves_metrics[slave]['used_resources']
+                smt = slaves_metrics[slave]['resources']
+                for metric_item in ['cpus', 'mem', 'disk']:
+                    perc = 100.0 * smu[metric_item] / smt[metric_item] if smt[metric_item] > 0 else 0
+                    metric_name = "history/slave/%s/allocated/%s" % (slave, metric_item)
+                    self.add_health_value(metric_name, 'allocated', metric_item, perc)
         else:
             LOGGER.debug('Stats output: %r', data)
