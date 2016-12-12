@@ -55,10 +55,11 @@ class DcosHealth(base.JSONStatsPlugin):
                 dcos_metrics['units']['unhealthy'] += 1
 
             units_metrics[name]['node'] = {}
-            for unode in unit['Nodes']:
-                unname = unode['IP']
-                units_metrics[name]['node'][unname] = {}
-                units_metrics[name]['node'][unname]['health'] = (1 if unode['Health'] == 0 else 0)
+            if unit['Nodes']:
+                for unode in unit['Nodes']:
+                    unname = unode['IP']
+                    units_metrics[name]['node'][unname] = {}
+                    units_metrics[name]['node'][unname]['health'] = (1 if unode['Health'] == 0 else 0)
 
         # get stats for each node and its units
         for nodekey in nodes:
@@ -74,10 +75,11 @@ class DcosHealth(base.JSONStatsPlugin):
                 dcos_metrics['nodes'][node['Role']]['unhealthy'] += 1
 
             nodes_metrics[name]['unit'] = {}
-            for nunit in node['Units']:
-                nuname = nunit['UnitName']
-                nodes_metrics[name]['unit'][nuname] = {}
-                nodes_metrics[name]['unit'][nuname]['health'] = (1 if nunit['Health'] == 0 else 0)
+            if node['Units']:
+                for nunit in node['Units']:
+                    nuname = nunit['UnitName']
+                    nodes_metrics[name]['unit'][nuname] = {}
+                    nodes_metrics[name]['unit'][nuname]['health'] = (1 if nunit['Health'] == 0 else 0)
 
         return (dcos_metrics, units_metrics, nodes_metrics)
 
